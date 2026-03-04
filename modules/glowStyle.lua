@@ -75,6 +75,7 @@ local function HookActionButtonSpellAlertManager()
             if activeGlowTarget.SpellActivationAlert then
                 activeGlowTarget.SpellActivationAlert:SetAlpha(0)
             end
+            return
         else
             if activeGlowTarget.SpellActivationAlert then
                 activeGlowTarget.SpellActivationAlert:SetAlpha(1)

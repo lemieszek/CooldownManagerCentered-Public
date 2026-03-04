@@ -18,6 +18,7 @@ local WILDCARD_SLOT_TRINKET2 = "trinket2"
 
 local IGNORED_WILDCARD_TRINKETS = {
     [264694] = true, -- Ultradon Cuirass
+    [248583] = true, -- Drum of Renewed Bonds
 }
 
 local WILDCARD_SLOT_DISPLAY_NAMES = {
