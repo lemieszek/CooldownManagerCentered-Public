@@ -12,6 +12,7 @@ local DEFAULT_SHOW_AURAS = true
 local DEFAULT_DISABLE_PROCS_GLOW = false
 local DEFAULT_REVERSE_AURA_SWIPE = false
 local DEFAULT_GLOW_WHEN_READY = false
+local DEFAULT_GLOW_ON_FULL_CHARGES = false
 local DEFAULT_ALWAYS_GLOW = false
 local DEFAULT_NEVER_DESATURATE = false
 
@@ -228,6 +229,15 @@ local function GetButtonGlowFrame(cdmFrame)
     return nil
 end
 
+local function EnsureButtonGlowFrame(cdmFrame)
+    local glowFrame = GetButtonGlowFrame(cdmFrame)
+    if glowFrame then
+        return glowFrame
+    end
+    SetButtonGlow(cdmFrame, true)
+    return GetButtonGlowFrame(cdmFrame)
+end
+
 local function UpdateButtonGlowState(cdmFrame, value)
     local cooldownInfo = cdmFrame:GetCooldownInfo()
     if cooldownInfo == nil then
@@ -236,15 +246,20 @@ local function UpdateButtonGlowState(cdmFrame, value)
     end
 
     if cooldownInfo.category == 0 or cooldownInfo.category == 1 then
+        if cooldownInfo.charges and CooldownStyle.GetGlowOnFullCharges(cooldownInfo.spellID) then
+            local glow = EnsureButtonGlowFrame(cdmFrame)
+
+            local spellID = cooldownInfo.overrideSpellID or cooldownInfo.spellID
+            local cooldownDuration = C_Spell.GetSpellChargeDuration(spellID)
+            local alpha = cooldownDuration:EvaluateRemainingDuration(notOnCDCurve)
+            glow:SetAlpha(alpha)
+            return
+        end
         if not CooldownStyle.GetGlowWhenReady(cooldownInfo.spellID) then
             SetButtonGlow(cdmFrame, false)
             return
         end
-        local glow = GetButtonGlowFrame(cdmFrame)
-        if not glow then
-            SetButtonGlow(cdmFrame, true)
-            return
-        end
+        local glow = EnsureButtonGlowFrame(cdmFrame)
         if issecretvalue(value) or value ~= nil then
             glow:SetAlphaFromBoolean(value, 0, 1)
             return
@@ -424,14 +439,22 @@ local function HookCooldownFrame(cdmFrame)
 
     cdmFrame._CMCTracker_Hooked = true
 
+    -- local cooldownInfo = cdmFrame:GetCooldownInfo()
+
     hooksecurefunc(cdmFrame.Cooldown, "SetCooldown", function(self)
         local cdmFrame = self:GetParent()
+        UpdateButtonGlowState(cdmFrame)
         ApplyCooldownSettings(cdmFrame)
     end)
 
+
     hooksecurefunc(cdmFrame.Icon, "SetDesaturated", function(self, secretValue)
         local cdmFrame = self:GetParent()
-        UpdateButtonGlowState(cdmFrame, secretValue)
+        if cdmFrame.wasSetFromAura then
+            UpdateButtonGlowState(cdmFrame)
+        else
+            UpdateButtonGlowState(cdmFrame, secretValue)
+        end
         ApplyIconSettings(cdmFrame)
     end)
 
@@ -575,6 +598,14 @@ function CooldownStyle:Initialize()
                 CooldownStyle.ToggleGlowWhenReady(spellID)
                 RefreshCooldownManagerFrames()
             end)
+            if cdInfo.charges then
+                rootDescription:CreateCheckbox("(Experimental) Glow when full charges", function()
+                    return CooldownStyle.GetGlowOnFullCharges(spellID)
+                end, function()
+                    CooldownStyle.ToggleGlowOnFullCharges(spellID)
+                    RefreshCooldownManagerFrames()
+                end)
+            end
 
             rootDescription:CreateCheckbox("(Experimental) Never Desaturate", function()
                 return CooldownStyle.GetNeverDesaturate(spellID)
@@ -749,6 +780,32 @@ end
 function CooldownStyle.ToggleGlowWhenReady(spellID)
     local current = CooldownStyle.GetGlowWhenReady(spellID)
     CooldownStyle.SetGlowWhenReady(spellID, not current)
+end
+
+function CooldownStyle.GetGlowOnFullCharges(spellID)
+    local settings = CooldownStyle.GetSpellSettings(spellID)
+    if settings and settings.glowOnFullCharges ~= nil then
+        return settings.glowOnFullCharges
+    end
+    return DEFAULT_GLOW_ON_FULL_CHARGES
+end
+
+function CooldownStyle.SetGlowOnFullCharges(spellID, value)
+    if value == DEFAULT_GLOW_ON_FULL_CHARGES then
+        local settings = CooldownStyle.GetSpellSettings(spellID)
+        if settings ~= nil then
+            settings.glowOnFullCharges = nil
+        end
+        return
+    end
+
+    local settings = CooldownStyle.EnsureSpellSettings(spellID)
+    settings.glowOnFullCharges = value
+end
+
+function CooldownStyle.ToggleGlowOnFullCharges(spellID)
+    local current = CooldownStyle.GetGlowOnFullCharges(spellID)
+    CooldownStyle.SetGlowOnFullCharges(spellID, not current)
 end
 
 function CooldownStyle.GetAlwaysGlow(spellID)
