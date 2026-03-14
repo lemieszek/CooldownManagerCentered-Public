@@ -5,13 +5,9 @@ ns.Addon = CooldownManagerCentered
 -- Default Settings
 ns.DEFAULT_SETTINGS = {
     profile = {
-        -- cooldownManager_centerBuffIcons = false,
         cooldownManager_alignBuffIcons_growFromDirection = "CENTER",
-        -- cooldownManager_alignBuffBars = false,
         cooldownManager_alignBuffBars_growFromDirection = "BOTTOM",
-        -- cooldownManager_centerEssential = false,
         cooldownManager_centerEssential_growFromDirection = "TOP",
-        -- cooldownManager_centerUtility = false,
         cooldownManager_centerUtility_growFromDirection = "TOP",
 
         cooldownManager_utility_dimWhenNotOnCD = false,
@@ -153,10 +149,8 @@ ns.DEFAULT_SETTINGS = {
             spellSettings = {},
         },
         editMode = {
-            trinketRacialTracker = {},
             tracker1 = {},
             tracker2 = {},
-            tracker3 = {},
         },
     },
 }

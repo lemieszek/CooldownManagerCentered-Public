@@ -77,15 +77,24 @@ function ItemVisuals:UpdateSpellCooldown(frame, spellID)
     if not frame or not frame.Cooldown then
         return false
     end
-    -- Clear item count display when updating spell cooldown (spells don't use count display)
-    frame.count:SetText("")
+    local spellCharges = C_Spell.GetSpellCharges(spellID)
+    if
+        spellCharges
+        and not issecretvalue(spellCharges.currentCharges)
+        and not issecretvalue(spellCharges.maxCharges)
+        and spellCharges.maxCharges > 1
+    then
+        frame.count:SetText(spellCharges.currentCharges)
+    else
+        frame.count:SetText("")
+    end
 
     local desaturation = 0
 
     if not C_Spell.GetSpellCooldown(spellID).isOnGCD then
         local cooldownDuration = C_Spell.GetSpellCooldownDuration(spellID)
         frame.Cooldown:SetCooldownFromDurationObject(cooldownDuration)
-        if C_Spell.GetSpellCharges(spellID) then
+        if spellCharges then
             local chargeDuration = C_Spell.GetSpellChargeDuration and C_Spell.GetSpellChargeDuration(spellID) or nil
             if chargeDuration then
                 frame.Cooldown:SetCooldownFromDurationObject(chargeDuration)

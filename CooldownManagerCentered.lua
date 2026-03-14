@@ -120,6 +120,7 @@ local function _cleanup()
         end
 
         ns.db.profile.cooldownManager_experimental_trinketRacialTracker = nil
+        ns.db.profile.editMode.trinketRacialTracker = nil
     end
     if
         ns.db.profile.trinketRacialTracker_position ~= nil
@@ -150,6 +151,18 @@ local function _cleanup()
     end
 
     ns.db.profile.cooldownManager_visibility_enabled = nil
+
+    ns.db.profile.cooldownManager_centerBuffIcons = nil
+    ns.db.profile.cooldownManager_alignBuffBars = nil
+    ns.db.profile.cooldownManager_centerEssential = nil
+    ns.db.profile.cooldownManager_centerUtility = nil
+    ns.db.profile.cmcSpellSettings = nil
+    ns.db.profile.cmcMiscTracked = nil
+    ns.db.profile.cooldownManager_experimental_miscTracker = nil
+    ns.db.profile.cooldownManager_smallerSpacing = nil
+    ns.db.profile.CooldownSkinning = nil
+    ns.db.profile.cooldownManager_customActiveColor_enabled = nil
+    ns.db.profile.miscTracker_squareIcons = nil
 end
 
 function addon:OnEnable()

@@ -194,6 +194,20 @@ local function GetBuffIconFrames()
     return frames
 end
 
+local function GetButtonGlowFrame(cdmFrame)
+    if cdmFrame._ProcGlow then
+        return cdmFrame._ProcGlow
+    end
+    if cdmFrame._AutoCastGlow then
+        return cdmFrame._AutoCastGlow
+    end
+    if cdmFrame._PixelGlow then
+        return cdmFrame._PixelGlow
+    end
+    -- action button glow is broken - please remember to ignore it
+    return nil
+end
+
 local function SetButtonGlow(cdmFrame, shouldGlow)
     if shouldGlow then
         local signature = GetGlowSignature(GLOW_STYLE_PROC)
@@ -213,20 +227,6 @@ local function SetButtonGlow(cdmFrame, shouldGlow)
         cdmFrame._CMC_CustomGlowSignature = nil
         StopAllCustomGlows(cdmFrame)
     end
-end
-
-local function GetButtonGlowFrame(cdmFrame)
-    if cdmFrame._ProcGlow then
-        return cdmFrame._ProcGlow
-    end
-    if cdmFrame._AutoCastGlow then
-        return cdmFrame._AutoCastGlow
-    end
-    if cdmFrame._PixelGlow then
-        return cdmFrame._PixelGlow
-    end
-    -- action button glow is broken - please remember to ignore it
-    return nil
 end
 
 local function EnsureButtonGlowFrame(cdmFrame)
@@ -261,7 +261,9 @@ local function UpdateButtonGlowState(cdmFrame, value)
         end
         local glow = EnsureButtonGlowFrame(cdmFrame)
         if issecretvalue(value) or value ~= nil then
-            glow:SetAlphaFromBoolean(value, 0, 1)
+            if glow then
+                glow:SetAlphaFromBoolean(value, 0, 1)
+            end
             return
         end
 
@@ -269,11 +271,16 @@ local function UpdateButtonGlowState(cdmFrame, value)
         local cooldown = C_Spell.GetSpellCooldown(spellID)
         if cooldown.isOnGCD then
             SetButtonGlow(cdmFrame, true)
+            if glow then
+                glow:SetAlpha(1)
+            end
             return
         end
         local cooldownDuration = C_Spell.GetSpellCooldownDuration(spellID)
         local alpha = cooldownDuration:EvaluateRemainingDuration(notOnCDCurve)
-        glow:SetAlpha(alpha)
+        if glow then
+            glow:SetAlpha(alpha)
+        end
         return
     end
 
@@ -296,10 +303,10 @@ local function ApplyIconSettings(cdmFrame)
         return
     end
 
-    local baseSpellId = FindBaseSpellByID(spellID)
+    local baseSpellId = cooldownInfo.spellID
 
     local shouldShowAuras = true
-    if not CooldownStyle.GetShowAuras(cooldownInfo.spellID) or not CooldownStyle.GetShowAuras(baseSpellId) then
+    if not CooldownStyle.GetShowAuras(baseSpellId) then
         shouldShowAuras = false
     end
 
@@ -368,9 +375,9 @@ local function ApplyCooldownSettings(cdmFrame)
     if not spellID then
         return
     end
-    local baseSpellId = FindBaseSpellByID(spellID)
+    local baseSpellId = cooldownInfo.spellID
     local shouldShowAuras = true
-    if not CooldownStyle.GetShowAuras(cooldownInfo.spellID) or not CooldownStyle.GetShowAuras(baseSpellId) then
+    if not CooldownStyle.GetShowAuras(baseSpellId) then
         shouldShowAuras = false
     end
 
@@ -393,6 +400,9 @@ local function ApplyCooldownSettings(cdmFrame)
     if ns.db.profile.cooldownManager_customSwipeColor_enabled then
         local _r, _g, _b, _a = GetCustomGCDSwipe()
         cdmFrame.Cooldown:SetSwipeColor(_r, _g, _b, _a)
+    else
+        -- from CooldownViewerConstants.ITEM_COOLDOWN_COLOR
+        cdmFrame.Cooldown:SetSwipeColor(0, 0, 0, 0.7)
     end
 
     local cooldown = C_Spell.GetSpellCooldown(spellID)
@@ -447,13 +457,18 @@ local function HookCooldownFrame(cdmFrame)
         ApplyCooldownSettings(cdmFrame)
     end)
 
+    hooksecurefunc(cdmFrame.Cooldown, "Clear", function(self)
+        local cdmFrame = self:GetParent()
+        UpdateButtonGlowState(cdmFrame)
+    end)
 
     hooksecurefunc(cdmFrame.Icon, "SetDesaturated", function(self, secretValue)
         local cdmFrame = self:GetParent()
         if cdmFrame.wasSetFromAura then
             UpdateButtonGlowState(cdmFrame)
         else
-            UpdateButtonGlowState(cdmFrame, secretValue)
+            -- -- Not optimal, x5-10 the events as from "Clear"
+            -- UpdateButtonGlowState(cdmFrame, secretValue)
         end
         ApplyIconSettings(cdmFrame)
     end)
@@ -473,7 +488,7 @@ local function HookBuffIconFrame(cdmFrame)
     if cdmFrame.GetCooldownInfo then
         local cooldownInfo = cdmFrame:GetCooldownInfo()
         if cooldownInfo and cooldownInfo.spellID then
-            local baseSpellId = FindBaseSpellByID(cooldownInfo.spellID)
+            local baseSpellId = cooldownInfo.spellID
             if cooldownInfo.category == 2 then
                 SetButtonGlow(cdmFrame, CooldownStyle.GetAlwaysGlow(baseSpellId))
             end
@@ -499,7 +514,7 @@ local function HookBuffIconFrame(cdmFrame)
         end
 
         cdmFrame.Cooldown:SetDrawEdge(CooldownStyle.GetAlwaysShowCooldownEdge(spellID))
-        local baseSpellId = FindBaseSpellByID(cooldownInfo.spellID)
+        local baseSpellId = cooldownInfo.spellID
         if cooldownInfo.category == 2 then
             SetButtonGlow(cdmFrame, CooldownStyle.GetAlwaysGlow(baseSpellId))
         end
@@ -679,6 +694,9 @@ function CooldownStyle.ToggleAlwaysShowCooldownEdge(spellID)
 end
 
 function CooldownStyle.GetShowAuras(spellID)
+    if spellID == nil then
+        return DEFAULT_SHOW_AURAS
+    end
     local settings = CooldownStyle.GetSpellSettings(spellID)
     if settings and settings.showAuras ~= nil then
         return settings.showAuras
