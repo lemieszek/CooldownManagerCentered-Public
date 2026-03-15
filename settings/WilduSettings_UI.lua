@@ -2111,9 +2111,10 @@ local function WilduSettings_BuildCooldown(category, layout)
             ["SHOW_IN_COMBAT"] = "Always show in Combat (overrides other rules)",
             ["SHOW_WITH_TARGET"] = "Show with Target (require having any hide rules enabled)",
             ["SHOW_WITH_ENEMY_TARGET"] = "Show with Enemy Target (require having any hide rules enabled)",
-            ["HIDE_WHEN_MOUNTED"] = "Hide when Mounted or Flying",
+            ["HIDE_WHEN_MOUNTED"] = "Hide when Mounted",
             ["HIDE_OUT_OF_COMBAT"] = "Hide out of Combat & Show in combat",
             ["HIDE_IN_VEHICLES"] = "Hide in Mini games & Vehicles (not mounts)",
+            ["SHOW_IN_INSTANCE"] = "Always show in Instances (overrides other rules)",
         },
         order = {
             "HIDE_WHEN_MOUNTED",
@@ -2122,6 +2123,7 @@ local function WilduSettings_BuildCooldown(category, layout)
             "SHOW_WITH_TARGET",
             "SHOW_WITH_ENEMY_TARGET",
             "SHOW_IN_COMBAT",
+            "SHOW_IN_INSTANCE",
         },
         getSelection = function()
             return ns.db.profile.cooldownManager_visibility_enabled_rules or {}

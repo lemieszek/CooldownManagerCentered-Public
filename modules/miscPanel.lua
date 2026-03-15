@@ -23,6 +23,24 @@ local reorderMarker = nil
 local reorderCursor = nil
 local reorderCursorFollow = false
 
+StaticPopupDialogs["CMC_ENABLE_TRACKER_AND_RELOAD"] = {
+    text = "CMC Tracker is disabled. Enable custom tracker and reload UI?",
+    button1 = _G.YES,
+    button2 = _G.NO,
+    OnAccept = function()
+        if not ns.db or not ns.db.profile then
+            return
+        end
+
+        ns.db.profile.tracker_enabled = true
+        ReloadUI()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
 local function IsTabButton(child)
     if not child then
         return false
@@ -1002,7 +1020,7 @@ local function ShowMiscPanel(settingsFrame)
 end
 
 function MiscPanel:EnsureMiscSettingsTab(settingsFrame)
-    if settingsFrame._CMCTracker_MiscPanel or not ns.db.profile.tracker_enabled then
+    if settingsFrame._CMCTracker_MiscPanel then
         return
     end
 
@@ -1118,6 +1136,11 @@ function MiscPanel:EnsureMiscSettingsTab(settingsFrame)
     end)
 
     miscTab:SetScript("OnClick", function(self)
+        if not ns.db.profile.tracker_enabled then
+            StaticPopup_Show("CMC_ENABLE_TRACKER_AND_RELOAD")
+            return
+        end
+
         if settingsFrame._CMCTracker_MiscPanel:IsShown() then
             return
         end
