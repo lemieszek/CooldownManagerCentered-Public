@@ -498,6 +498,8 @@ function TrackerInstance:Create()
         iconSize = DEFAULT_ICON_SIZE,
         iconPadding = DEFAULT_ICON_PADDING,
         orientation = "Horizontal Right",
+        anchoredToTracker1 = false,
+        anchoredToTracker1Spacing = DEFAULT_ICON_PADDING,
     }
 
     WilduUICore.LoadFrameConfig(self.configKey, DEFAULT_CONFIG)
@@ -568,6 +570,7 @@ function TrackerInstance:Create()
 
         if ns.db.profile.editMode[configKey].anchoredToTracker1 then
             local x, y
+            local spacing = ns.db.profile.editMode[configKey].anchoredToTracker1Spacing or DEFAULT_ICON_PADDING
             if anchorPrimary == "LEFT" then
                 x = ns.db.profile.editMode[configKey].anchoredToTracker1Spacing
                 y = 0
@@ -720,9 +723,9 @@ function TrackerInstance:Create()
         tinsert(additionalSettings, {
             name = "Spacing",
             kind = LEM.SettingType.Slider,
-            default = DEFAULT_CONFIG.iconPadding,
+            default = DEFAULT_ICON_PADDING,
             get = function()
-                return ns.db.profile.editMode[configKey].anchoredToTracker1Spacing or DEFAULT_CONFIG.iconPadding
+                return ns.db.profile.editMode[configKey].anchoredToTracker1Spacing or DEFAULT_ICON_PADDING
             end,
             set = function(layoutName, value)
                 ns.db.profile.editMode[configKey].anchoredToTracker1Spacing = value

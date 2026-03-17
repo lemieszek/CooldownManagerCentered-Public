@@ -284,7 +284,7 @@ local function AddSpellToTracking(spellID, state)
 
     -- local overrideSpell = C_Spell.GetOverrideSpell(spellID)
     local baseSpellID = C_Spell.GetBaseSpell(spellID)
-    local isUsable = C_Spell and C_Spell.DoesSpellExist and C_Spell.DoesSpellExist(baseSpellID)
+    local isUsable = C_Spell.DoesSpellExist(baseSpellID)
     if not isUsable then
         return nil, "Spell does not exist."
     end
@@ -307,7 +307,7 @@ local function AddItemToTracking(itemID, state)
         return nil, "Cannot add item to tracking while in combat."
     end
 
-    local _spellName, spellId = C_Item and C_Item.GetItemSpell and C_Item.GetItemSpell(itemID)
+    local _spellName, spellId = C_Item.GetItemSpell(itemID)
     if not spellId then
         return nil, "Item is not usable."
     end
