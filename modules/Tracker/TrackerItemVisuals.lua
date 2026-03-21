@@ -77,7 +77,7 @@ function ItemVisuals:UpdateSpellCooldown(frame, spellID)
 
     local spellCharges = C_Spell.GetSpellCharges(overrideSpellID)
     if spellCharges then
-        frame.count:SetText(spellCharges.currentCharges)
+        frame.count:SetText(C_Spell.GetSpellDisplayCount(overrideSpellID))
     else
         frame.count:SetText("")
     end
@@ -89,7 +89,7 @@ function ItemVisuals:UpdateSpellCooldown(frame, spellID)
         local chargeDuration = C_Spell.GetSpellChargeDuration(overrideSpellID)
         frame.Cooldown:SetCooldownFromDurationObject(chargeDuration)
     else
-        if not C_Spell.GetSpellCooldown(overrideSpellID).isOnGCD then
+        if frame.showGCD or not C_Spell.GetSpellCooldown(overrideSpellID).isOnGCD then
             frame.Cooldown:SetCooldownFromDurationObject(cooldownDuration)
             frame.Cooldown:SetDrawSwipe(true)
         end

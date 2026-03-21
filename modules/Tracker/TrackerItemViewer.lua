@@ -33,6 +33,11 @@ local OPPOSITE_ANCHOR = {
     CENTER = "BOTTOM",
 }
 
+local CONFIG_KEY_TO_NAME = {
+    ["tracker1"] = "|cff008945Cool|r|cff1e9a4e|r|cff3faa4fdown Ma|r|cff5fb64anag|r|cff7ac243er Ce|r|cff8ccd00ntered|r 1",
+    ["tracker2"] = "|cff008945Cool|r|cff1e9a4e|r|cff3faa4fdown Ma|r|cff5fb64anag|r|cff7ac243er Ce|r|cff8ccd00ntered|r 2",
+}
+
 local function IsSquareIconsEnabled()
     return (ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_squareIcons) or false
 end
@@ -248,6 +253,7 @@ end
 
 function ItemViewerFrame:Initialize()
     local frame = self.frame
+    frame.showGCD = false
     if not frame.Icon then
         frame.Icon = frame:CreateTexture(nil, "ARTWORK")
         frame.Icon:SetAllPoints()
@@ -359,6 +365,7 @@ function TrackerInstance:New(configKey, frameName, getEntriesFn)
     local instance = setmetatable({
         configKey = configKey,
         frameName = frameName,
+        editModeName = CONFIG_KEY_TO_NAME[configKey] or frameName,
         getEntriesFn = getEntriesFn,
         anchor = nil,
         iconFrames = {},
@@ -377,6 +384,10 @@ end
 
 function TrackerInstance:GetOrientation()
     return GetConfigValue(self.configKey, "orientation", "Horizontal Right")
+end
+
+function TrackerInstance:GetShowGCD()
+    return GetConfigValue(self.configKey, "showGCD", false)
 end
 
 function TrackerInstance:UpdateIconPosition(frame, visibleIndex)
@@ -428,6 +439,7 @@ function TrackerInstance:RefreshEntries()
     local iconSize = self:GetIconSize()
     local padding = self:GetIconPadding()
     local orientation = self:GetOrientation()
+    local showGCD = self:GetShowGCD()
     local count = #entries
 
     for i = 1, count do
@@ -436,6 +448,7 @@ function TrackerInstance:RefreshEntries()
         end
         local ivf = self.iconFrames[i]
         ivf.frame:SetSize(iconSize, iconSize)
+        ivf.frame.showGCD = showGCD
 
         local db = DB.GetDB()
         if ivf.frame.Cooldown then
@@ -506,6 +519,9 @@ function TrackerInstance:Create()
     local iconSize = self:GetIconSize()
 
     self.anchor = CreateFrame("Frame", self.frameName, UIParent, "BackdropTemplate")
+
+    self.anchor.editModeName = self.editModeName
+
     self.anchor:SetSize(iconSize, iconSize)
     self.anchor:SetClampedToScreen(true)
 
@@ -516,8 +532,8 @@ function TrackerInstance:Create()
     self.anchor:RegisterEvent("BAG_UPDATE_DELAYED")
     self.anchor:RegisterEvent("BAG_UPDATE_COOLDOWN")
     self.anchor:RegisterEvent("PLAYER_ENTERING_WORLD")
-    self.anchor:RegisterEvent("PLAYER_TALENT_UPDATE")
-    self.anchor:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+    self.anchor:RegisterEvent("TRAIT_CONFIG_UPDATED")
+    self.anchor:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 
     self.anchor:SetScript("OnEvent", function(_, event, arg1)
         if event == "SPELL_UPDATE_COOLDOWN" or event == "SPELL_UPDATE_CHARGES" or event == "BAG_UPDATE_COOLDOWN" then
@@ -537,6 +553,19 @@ function TrackerInstance:Create()
             end)
         elseif event == "BAG_UPDATE_DELAYED" then
             C_Timer.After(0.2, function()
+                self:RefreshEntries()
+            end)
+        elseif
+            event == "TRAIT_CONFIG_UPDATED"
+            or event == "PLAYER_SPECIALIZATION_CHANGED"
+            or event == "PLAYER_TALENT_UPDATE"
+            or event == "ACTIVE_TALENT_GROUP_CHANGED"
+        then
+            if ItemsData and ItemsData.InvalidateSpellBookCache then
+                ItemsData:InvalidateSpellBookCache()
+            end
+            self:RefreshEntries()
+            C_Timer.After(0.3, function()
                 self:RefreshEntries()
             end)
         else
@@ -703,6 +732,18 @@ function TrackerInstance:Create()
             valueStep = 0.01,
             formatter = function(value)
                 return string.format("%.2f", value)
+            end,
+        },
+        {
+            name = "Show GCD",
+            kind = LEM.SettingType.Checkbox,
+            default = false,
+            get = function()
+                return ns.db.profile.editMode[configKey].showGCD or false
+            end,
+            set = function(layoutName, value)
+                ns.db.profile.editMode[configKey].showGCD = value
+                instance:RefreshEntries()
             end,
         },
     }

@@ -324,7 +324,11 @@ local function ApplyIconSettings(cdmFrame)
 
     if shouldShowAuras and cdmFrame.wasSetFromAura then
         cdmFrame.Cooldown:SetDrawSwipe(cdmFrame.cooldownShowSwipe == true)
-        cdmFrame.Icon:SetDesaturation(0)
+        if ns.db.profile.cooldownManager_desaturate_under_aura then
+            cdmFrame.Icon:SetDesaturation(1)
+        else
+            cdmFrame.Icon:SetDesaturation(0)
+        end
         return
     end
 
@@ -342,7 +346,9 @@ local function ApplyIconSettings(cdmFrame)
                 if issecretvalue(cdmFrame.Icon:IsDesaturated()) then
                     local flashIsShown = cdmFrame.CooldownFlash:IsShown()
                     cdmFrame.Cooldown:SetDrawSwipe(flashIsShown)
-                    cdmFrame.Cooldown:SetDrawEdge(not flashIsShown or CooldownStyle.GetAlwaysShowCooldownEdge(spellID))
+                    cdmFrame.Cooldown:SetDrawEdge(
+                        not flashIsShown or CooldownStyle.GetAlwaysShowCooldownEdge(baseSpellId)
+                    )
                 else
                     cdmFrame.Cooldown:SetDrawSwipe(false)
                     cdmFrame.Cooldown:SetDrawEdge(true)
@@ -351,7 +357,7 @@ local function ApplyIconSettings(cdmFrame)
                 cdmFrame.Cooldown:SetDrawSwipe(spellCharges.currentCharges == 0)
                 cdmFrame.Cooldown:SetDrawEdge(
                     spellCharges.currentCharges < spellCharges.maxCharges
-                        or CooldownStyle.GetAlwaysShowCooldownEdge(spellID)
+                        or CooldownStyle.GetAlwaysShowCooldownEdge(baseSpellId)
                 )
             end
         else
@@ -393,7 +399,7 @@ local function ApplyCooldownSettings(cdmFrame)
         shouldShowAuras = false
     end
 
-    if CooldownStyle.GetAlwaysShowCooldownEdge(spellID) then
+    if CooldownStyle.GetAlwaysShowCooldownEdge(baseSpellId) then
         cdmFrame.Cooldown:SetDrawEdge(true)
     end
 
@@ -402,6 +408,9 @@ local function ApplyCooldownSettings(cdmFrame)
         if ns.db.profile.cooldownManager_customSwipeColor_enabled then
             local _r, _g, _b, _a = GetCustomActiveSwipe()
             cdmFrame.Cooldown:SetSwipeColor(_r, _g, _b, _a)
+        end
+        if ns.db.profile.cooldownManager_desaturate_under_aura then
+            cdmFrame.Icon:SetDesaturation(1)
         end
         return
     end
@@ -421,9 +430,20 @@ local function ApplyCooldownSettings(cdmFrame)
 
     cdmFrame._CMCTracker_Desaturation = nil
 
-    if shouldHideAuras then
+    if shouldHideAuras and CooldownStyle.FORCE_DISABLED_INSTANT_CASTS[baseSpellId] then
+        if cooldown.isOnGCD and not ns.db.profile.cooldownManager_hide_gcd then
+            local cooldownDuration = C_Spell.GetSpellCooldownDuration(GCD_SPELL_ID)
+            cdmFrame.Cooldown:SetCooldownFromDurationObject(cooldownDuration)
+        else
+            cdmFrame.Cooldown:SetCooldownFromDurationObject(C_DurationUtil.CreateDuration())
+        end
+    elseif shouldHideAuras then
         if cooldown.isOnGCD then
-            cdmFrame.Cooldown:SetCooldownFromDurationObject(C_Spell.GetSpellCooldownDuration(GCD_SPELL_ID))
+            if ns.db.profile.cooldownManager_hide_gcd then
+                cdmFrame.Cooldown:SetCooldownFromDurationObject(C_DurationUtil.CreateDuration())
+            else
+                cdmFrame.Cooldown:SetCooldownFromDurationObject(C_Spell.GetSpellCooldownDuration(GCD_SPELL_ID))
+            end
         else
             if C_Spell.GetSpellCharges(spellID) then
                 cdmFrame._CMCTracker_Desaturation = 1
@@ -434,14 +454,8 @@ local function ApplyCooldownSettings(cdmFrame)
                 cdmFrame._CMCTracker_Desaturation = cooldownDuration:EvaluateRemainingDuration(desaturationCurve)
             end
         end
-    end
-    if shouldHideAuras and CooldownStyle.FORCE_DISABLED_INSTANT_CASTS[baseSpellId] then
-        if cooldown.isOnGCD then
-            local cooldownDuration = C_Spell.GetSpellCooldownDuration(GCD_SPELL_ID)
-            cdmFrame.Cooldown:SetCooldownFromDurationObject(cooldownDuration)
-        else
-            cdmFrame.Cooldown:SetCooldownFromDurationObject(C_DurationUtil.CreateDuration())
-        end
+    elseif cooldown.isOnGCD and ns.db.profile.cooldownManager_hide_gcd then
+        cdmFrame.Cooldown:SetCooldownFromDurationObject(C_DurationUtil.CreateDuration())
     end
 
     ApplyIconSettings(cdmFrame)
@@ -520,13 +534,8 @@ local function HookBuffIconFrame(cdmFrame)
             return
         end
 
-        local spellID = cooldownInfo.overrideSpellID or cooldownInfo.spellID
-        if not spellID then
-            return
-        end
-
-        cdmFrame.Cooldown:SetDrawEdge(CooldownStyle.GetAlwaysShowCooldownEdge(spellID))
         local baseSpellId = cooldownInfo.spellID
+        cdmFrame.Cooldown:SetDrawEdge(CooldownStyle.GetAlwaysShowCooldownEdge(baseSpellId))
         if cooldownInfo.category == 2 then
             SetButtonGlow(cdmFrame, CooldownStyle.GetAlwaysGlow(baseSpellId))
         end
@@ -619,14 +628,14 @@ function CooldownStyle:Initialize()
                 -- RefreshCooldownManagerFrames()
             end)
 
-            rootDescription:CreateCheckbox("(Experimental) Glow when ready", function()
+            rootDescription:CreateCheckbox("Glow when ready", function()
                 return CooldownStyle.GetGlowWhenReady(spellID)
             end, function()
                 CooldownStyle.ToggleGlowWhenReady(spellID)
                 RefreshCooldownManagerFrames()
             end)
             if cdInfo.charges then
-                rootDescription:CreateCheckbox("(Experimental) Glow when full charges", function()
+                rootDescription:CreateCheckbox("Glow when full charges", function()
                     return CooldownStyle.GetGlowOnFullCharges(spellID)
                 end, function()
                     CooldownStyle.ToggleGlowOnFullCharges(spellID)
@@ -634,7 +643,7 @@ function CooldownStyle:Initialize()
                 end)
             end
 
-            rootDescription:CreateCheckbox("(Experimental) Never Desaturate", function()
+            rootDescription:CreateCheckbox("Never Desaturate", function()
                 return CooldownStyle.GetNeverDesaturate(spellID)
             end, function()
                 CooldownStyle.ToggleNeverDesaturate(spellID)
@@ -643,7 +652,7 @@ function CooldownStyle:Initialize()
         end
 
         if category == 2 or category == -2 then
-            rootDescription:CreateCheckbox("(Experimental) Always glow", function()
+            rootDescription:CreateCheckbox("Always glow", function()
                 return CooldownStyle.GetAlwaysGlow(spellID)
             end, function()
                 CooldownStyle.ToggleAlwaysGlow(spellID)

@@ -2412,6 +2412,40 @@ local function WilduSettings_BuildCooldown(category, layout)
         desc = "Set |cffff0000maximum|r Utility width to the width of Essential\nIt will |cffff0000not get narrower than 6|r icons or limit you set in |cff87bbcaEdit Mode|r",
     })
 
+    SettingsLib:CreateCheckbox(category, {
+        prefix = "CMC_",
+        key = "cooldownManager_desaturate_under_aura",
+        name = "Desaturate Icon Under Aura",
+        default = false,
+        get = function()
+            return ns.db.profile.cooldownManager_desaturate_under_aura or false
+        end,
+        set = function(value)
+            ns.db.profile.cooldownManager_desaturate_under_aura = value
+            if ns.CooldownStyle then
+                ns.CooldownStyle:RefreshHooks()
+            end
+        end,
+        desc = "Desaturate cooldown icons anyway when there is an active Aura for that ability.",
+    })
+
+    SettingsLib:CreateCheckbox(category, {
+        prefix = "CMC_",
+        key = "cooldownManager_hide_gcd",
+        name = "Hide GCD",
+        default = false,
+        get = function()
+            return ns.db.profile.cooldownManager_hide_gcd or false
+        end,
+        set = function(value)
+            ns.db.profile.cooldownManager_hide_gcd = value
+            if ns.CooldownStyle then
+                ns.CooldownStyle:RefreshHooks()
+            end
+        end,
+        desc = "Hide the GCD cooldown spiral on cooldown icons.",
+    })
+
     SettingsLib:CreateCheckboxSlider(category, {
         prefix = "CMC_",
         key = "cooldownManager_utility_dimWhenNotOnCD",
