@@ -799,6 +799,33 @@ local tracker2 = TrackerInstance:New("tracker2", "CMCTracker2", function(owned)
 end)
 
 local trackers = { tracker1, tracker2 }
+local spellCastEventFrame = nil
+
+local function EnsureSpellCastListener()
+    if spellCastEventFrame then
+        return
+    end
+
+    spellCastEventFrame = CreateFrame("Frame")
+    spellCastEventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+    spellCastEventFrame:SetScript("OnEvent", function(_, _event, unitTarget, _castGUID, spellID)
+        if unitTarget ~= "player" or not spellID then
+            return
+        end
+
+        local matched = false
+        if ItemVisuals and ItemVisuals.MarkSpellCastActive and ItemVisuals:MarkSpellCastActive(spellID) then
+            matched = true
+        end
+        if ItemVisuals and ItemVisuals.MarkItemCastActive and ItemVisuals:MarkItemCastActive(spellID) then
+            matched = true
+        end
+
+        if matched then
+            ItemViewer:RefreshItemViewerFrames()
+        end
+    end)
+end
 
 function ItemViewer:RefreshItemViewerFrames()
     for _, tracker in ipairs(trackers) do
@@ -816,6 +843,9 @@ function ItemViewer:Initialize()
     if not ns.db.profile.tracker_enabled then
         return
     end
+
+    EnsureSpellCastListener()
+
     for _, tracker in ipairs(trackers) do
         tracker:Create()
     end
