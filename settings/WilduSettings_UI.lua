@@ -67,7 +67,7 @@ local function WilduSettings_BuildCooldown(category, layout)
                 ["CENTER"] = "Grow from |cff8ccd00Center|r",
                 ["END"] = BuffIconCooldownViewer.isHorizontal and "Grow from the |cff8ccd00End|r"
                     or "Grow from the |cff8ccd00End|r",
-                ["Disable"] = "|cff7c7c7cDisable dynamic layout|r",
+                ["Disable"] = "|cffff2020Disable|r centering",
             }
         end,
         order = { "START", "CENTER", "END", "Disable" },
@@ -100,7 +100,7 @@ local function WilduSettings_BuildCooldown(category, layout)
         values = {
             BOTTOM = "Bars grow from |cff8ccd00Bottom|r",
             TOP = "Bars grow from |cff8ccd00Top|r",
-            ["Disable"] = "|cff7c7c7cDisable dynamic layout|r",
+            ["Disable"] = "|cffff2020Disable|r centering",
         },
         order = { "TOP", "BOTTOM", "Disable" },
         get = function()
@@ -124,7 +124,7 @@ local function WilduSettings_BuildCooldown(category, layout)
                     or "New Columns to the |cff8ccd00Left|r",
                 TOP = EssentialCooldownViewer.isHorizontal and "New Rows |cff8ccd00Below|r"
                     or "New Columns to the |cff8ccd00Right|r",
-                ["Disable"] = "|cff7c7c7cDisable dynamic layout|r",
+                ["Disable"] = "|cffff2020Disable|r centering",
             }
         end,
         order = { "TOP", "BOTTOM", "Disable" },
@@ -149,7 +149,7 @@ local function WilduSettings_BuildCooldown(category, layout)
                     or "New Columns to the |cff8ccd00Left|r",
                 TOP = UtilityCooldownViewer.isHorizontal and "New Rows |cff8ccd00Below|r"
                     or "New Columns to the |cff8ccd00Right|r",
-                ["Disable"] = "|cff7c7c7cDisable dynamic layout|r",
+                ["Disable"] = "|cffff2020Disable|r centering",
             }
         end,
         order = { "TOP", "BOTTOM", "Disable" },
@@ -2084,7 +2084,6 @@ local function WilduSettings_BuildCooldown(category, layout)
             if ns.TrackerItemViewer then
                 ns.TrackerItemViewer:RefreshStyling()
             end
-            ns.API:ShowReloadUIConfirmation()
         end,
         desc = "Apply square icon styling to the Trinket, Potion & Racial Tracker. When disabled, the default cooldown manager mask (texture 6707800) is used.",
     })
