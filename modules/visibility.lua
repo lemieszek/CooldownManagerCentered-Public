@@ -109,6 +109,14 @@ function CMCVisibility:Update(viewer, viewerName, settingsKey)
         return
     end
 
+    if
+        ns.db.profile.cooldownManager_visibility_fadeOutOfCombat
+        and not inCombat
+    then
+        viewer:SetAlpha(ns.db.profile.cooldownManager_visibility_outOfCombatOpacity or 0.3)
+        return
+    end
+
     viewer:SetAlpha(alpha)
 end
 

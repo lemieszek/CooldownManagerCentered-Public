@@ -2564,6 +2564,39 @@ local function WilduSettings_BuildCooldown(category, layout)
         end,
     })
 
+    SettingsLib:CreateCheckboxSlider(category, {
+        prefix = "CMC_",
+        key = "cooldownManager_visibility_fadeOutOfCombat",
+        name = "Fade out of combat",
+        searchtags = { "Visibility", "Opacity", "Alpha", "Fade", "Transparent", "Combat", "Hide", "Show", "CDM" },
+        default = false,
+        get = function()
+            return ns.db.profile.cooldownManager_visibility_fadeOutOfCombat
+        end,
+        set = function(value)
+            ns.db.profile.cooldownManager_visibility_fadeOutOfCombat = value
+            ns.CMCVisibility:UpdateAll()
+        end,
+        desc = "Fade selected Cooldown Manager viewers while out of combat.",
+
+        sliderKey = "cooldownManager_visibility_outOfCombatOpacity",
+        sliderName = "Out of combat opacity",
+        sliderMin = 0,
+        sliderMax = 0.9,
+        sliderStep = 0.05,
+        sliderDefault = 0.3,
+        sliderGet = function()
+            return ns.db.profile.cooldownManager_visibility_outOfCombatOpacity
+        end,
+        sliderSet = function(value)
+            ns.db.profile.cooldownManager_visibility_outOfCombatOpacity = value
+            ns.CMCVisibility:UpdateAll()
+        end,
+        sliderFormatter = function(value)
+            return string.format("%.0f%%", value * 100)
+        end,
+    })
+
     local version = C_AddOns.GetAddOnMetadata("CooldownManagerCentered", "version")
     SettingsLib:CreateText(category, {
         name = "|cffccccccAddon version: " .. version .. "|r",
