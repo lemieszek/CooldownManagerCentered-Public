@@ -2069,6 +2069,50 @@ local function WilduSettings_BuildCooldown(category, layout)
         colorizeTitle = true,
     })
 
+    local function IsTrackerMasqueModeEnabled()
+        return (ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_masque) or false
+    end
+
+    SettingsLib:CreateCheckbox(category, {
+        parentSection = trackerStyleSection,
+        prefix = "CMC_",
+        key = "trinketRacialTracker_masque",
+        name = "Masque Integration",
+        searchtags = { "Trinket", "Racial", "Tracker", "Masque", "Skin", "Style" },
+        default = false,
+        get = function()
+            return IsTrackerMasqueModeEnabled()
+        end,
+        set = function(value)
+            ns.db.profile.trinketRacialTracker_masque = value
+            if value then
+                ns.db.profile.trinketRacialTracker_masque_prevSquareIcons = ns.db.profile.trinketRacialTracker_squareIcons
+                ns.db.profile.trinketRacialTracker_masque_prevBorderThickness = ns.db.profile.trinketRacialTracker_borderThickness
+                ns.db.profile.trinketRacialTracker_masque_prevIconZoom = ns.db.profile.trinketRacialTracker_iconZoom
+                ns.db.profile.trinketRacialTracker_squareIcons = true
+                ns.db.profile.trinketRacialTracker_borderThickness = 0
+            else
+                if ns.db.profile.trinketRacialTracker_masque_prevSquareIcons ~= nil then
+                    ns.db.profile.trinketRacialTracker_squareIcons = ns.db.profile.trinketRacialTracker_masque_prevSquareIcons
+                end
+                if ns.db.profile.trinketRacialTracker_masque_prevBorderThickness ~= nil then
+                    ns.db.profile.trinketRacialTracker_borderThickness = ns.db.profile.trinketRacialTracker_masque_prevBorderThickness
+                end
+                if ns.db.profile.trinketRacialTracker_masque_prevIconZoom ~= nil then
+                    ns.db.profile.trinketRacialTracker_iconZoom = ns.db.profile.trinketRacialTracker_masque_prevIconZoom
+                end
+            end
+            if ns.TrackerItemViewer then
+                ns.TrackerItemViewer:RefreshItemViewerFrames()
+                ns.TrackerItemViewer:RefreshStyling()
+            end
+            if SettingsPanel and SettingsPanel.RepairDisplay then
+                SettingsPanel:RepairDisplay()
+            end
+        end,
+        desc = "Enable tracker icon skinning through Masque. While enabled, Square Icons/Border/Icon Zoom controls are locked; Square Icons is forced on and Border Thickness is forced to 0.",
+    })
+
     SettingsLib:CreateCheckbox(category, {
         parentSection = trackerStyleSection,
         prefix = "CMC_",
@@ -2084,6 +2128,9 @@ local function WilduSettings_BuildCooldown(category, layout)
             if ns.TrackerItemViewer then
                 ns.TrackerItemViewer:RefreshStyling()
             end
+        end,
+        isEnabled = function()
+            return not IsTrackerMasqueModeEnabled()
         end,
         desc = "Apply square icon styling to the Trinket, Potion & Racial Tracker. When disabled, the default cooldown manager mask (texture 6707800) is used.",
     })
@@ -2110,6 +2157,9 @@ local function WilduSettings_BuildCooldown(category, layout)
                 ns.TrackerItemViewer:RefreshStyling()
             end
         end,
+        isEnabled = function()
+            return not IsTrackerMasqueModeEnabled()
+        end,
         desc = "Border thickness for tracker icons (space between icon edge and texture).",
     })
 
@@ -2135,6 +2185,9 @@ local function WilduSettings_BuildCooldown(category, layout)
             if ns.TrackerItemViewer then
                 ns.TrackerItemViewer:RefreshStyling()
             end
+        end,
+        isEnabled = function()
+            return not IsTrackerMasqueModeEnabled()
         end,
         desc = "Zoom level for tracker icons (0 = no zoom, 0.5 = maximum zoom).",
     })
