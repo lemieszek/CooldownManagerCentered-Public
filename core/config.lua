@@ -141,6 +141,7 @@ ns.DEFAULT_SETTINGS = {
         cooldownManager_experimental_enableRectangularIcons_buffIcons_percent = 0.8,
 
         -- used for new tracker as well - legacy name
+        trinketRacialTracker_masque = false,
         trinketRacialTracker_squareIcons = false,
         trinketRacialTracker_borderThickness = 1,
         trinketRacialTracker_iconZoom = 0.3,

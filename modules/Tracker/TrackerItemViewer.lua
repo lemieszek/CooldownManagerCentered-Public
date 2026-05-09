@@ -6,6 +6,123 @@ local ItemVisuals = ns.TrackerItemVisuals
 local WilduUICore = ns.WilduUICore
 local LSM = LibStub("LibSharedMedia-3.0", true)
 local LEM = LibStub("LibEQOLEditMode-1.0")
+local Masque = LibStub("Masque", true)
+
+local masqueTrackerGroup
+
+local function IsTrackerMasqueEnabled()
+    return Masque and ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_masque
+end
+
+local function GetMasqueTrackerGroup()
+    if not IsTrackerMasqueEnabled() then
+        return nil
+    end
+    if not masqueTrackerGroup then
+        masqueTrackerGroup = Masque:Group("Cooldown Manager Centered", "Trackers")
+    end
+    return masqueTrackerGroup
+end
+
+local function ReskinMasqueTrackerGroup()
+    local group = GetMasqueTrackerGroup()
+    if group and group.ReSkin then
+        group:ReSkin()
+    end
+end
+
+local function DisableFrameMasqueSkin(frame)
+    if not frame then
+        return
+    end
+    local group = masqueTrackerGroup
+    if group then
+        if group.RemoveButton then
+            group:RemoveButton(frame)
+        elseif group.Remove then
+            group:Remove(frame)
+        end
+    end
+    if frame.Icon then
+        frame.Icon:SetAlpha(1)
+    end
+    if frame.MasqueIcon then
+        frame.MasqueIcon:Hide()
+    end
+    frame.isSkinnedByMasque = nil
+end
+
+-- Masque skins a proxy icon texture; the real Icon stays functional for CMC logic but is hidden.
+local function EnsureFrameMasqueSkin(frame)
+    if not frame or frame.isSkinnedByMasque then
+        return
+    end
+    local group = GetMasqueTrackerGroup()
+    if not group or not frame.Icon or not frame.Cooldown then
+        return
+    end
+
+    if not frame.MasqueIcon then
+        frame.MasqueIcon = frame:CreateTexture(nil, "BACKGROUND")
+        frame.MasqueIcon:SetAllPoints(frame)
+    end
+
+    local icon = frame.Icon
+    local mic = frame.MasqueIcon
+    mic:Show()
+
+    local tex = icon:GetTexture()
+    if tex then
+        mic:SetTexture(tex)
+    else
+        local atlas = icon.GetAtlas and icon:GetAtlas()
+        if atlas then
+            mic:SetAtlas(atlas, true)
+        end
+    end
+
+    if not frame._CMC_MasqueIconHooks then
+        frame._CMC_MasqueIconHooks = true
+        hooksecurefunc(icon, "SetTexture", function(_, ...)
+            mic:SetTexture(...)
+        end)
+        hooksecurefunc(icon, "SetAtlas", function(_, atlas, useAtlasSize)
+            if atlas then
+                mic:SetAtlas(atlas, useAtlasSize)
+            else
+                mic:SetTexture(nil)
+            end
+        end)
+        hooksecurefunc(icon, "SetTexCoord", function(_, ...)
+            mic:SetTexCoord(...)
+        end)
+        hooksecurefunc(icon, "SetDesaturation", function(_, desat)
+            mic:SetDesaturation(desat or 0)
+        end)
+        if icon.SetDesaturated then
+            hooksecurefunc(icon, "SetDesaturated", function(_, flag)
+                mic:SetDesaturated(flag)
+            end)
+        end
+    end
+
+    if icon.GetTexCoord then
+        mic:SetTexCoord(icon:GetTexCoord())
+    end
+
+    icon:SetAlpha(0)
+    group:AddButton(frame, { Icon = mic })
+    frame.isSkinnedByMasque = true
+    group:ReSkin()
+end
+
+local function UpdateFrameMasqueSkin(frame)
+    if IsTrackerMasqueEnabled() then
+        EnsureFrameMasqueSkin(frame)
+    else
+        DisableFrameMasqueSkin(frame)
+    end
+end
 
 local ItemViewer = ns.TrackerItemViewer or {}
 ns.TrackerItemViewer = ItemViewer
@@ -39,10 +156,16 @@ local CONFIG_KEY_TO_NAME = {
 }
 
 local function IsSquareIconsEnabled()
+    if IsTrackerMasqueEnabled() then
+        return true
+    end
     return (ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_squareIcons) or false
 end
 
 local function GetBorderThickness()
+    if IsTrackerMasqueEnabled() then
+        return 0
+    end
     return (ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_borderThickness) or 1
 end
 
@@ -194,6 +317,17 @@ local function ApplySquareStyle(frame)
         frame.cmcBorder:SetBackdropBorderColor(0, 0, 0, 1)
         frame.cmcBorder:Show()
     end
+
+    if frame.MasqueIcon then
+        if not frame.masqueMask then
+            frame.masqueMask = frame:CreateMaskTexture()
+            frame.masqueMask:SetAllPoints(frame.MasqueIcon)
+            frame.MasqueIcon:AddMaskTexture(frame.masqueMask)
+        end
+        frame.masqueMask:SetTexture(BASE_SQUARE_MASK)
+        frame.masqueMask:Show()
+    end
+
     frame._CMC_SquareStyle = true
 end
 
@@ -214,6 +348,12 @@ local function RestoreDefaultStyle(frame)
     if frame.cmcBorder then
         frame.cmcBorder:Hide()
     end
+
+    if frame.masqueMask and frame.MasqueIcon and frame.MasqueIcon.RemoveMaskTexture then
+        frame.MasqueIcon:RemoveMaskTexture(frame.masqueMask)
+        frame.masqueMask = nil
+    end
+
     frame._CMC_SquareStyle = nil
 end
 
@@ -310,6 +450,7 @@ function ItemViewerFrame:Initialize()
         frame.count = count
     end
     ApplyStyleToFrame(frame)
+    UpdateFrameMasqueSkin(frame)
     ApplyStackFontToFrame(frame)
     ApplyCooldownFontToFrame(frame)
     frame:Hide()
@@ -328,6 +469,7 @@ function ItemViewerFrame:UpdateEntry(entry)
     if not entry then
         frame._CMCTracker_EntryKind = nil
         frame._CMCTracker_EntryID = nil
+        UpdateFrameMasqueSkin(frame)
         frame:Hide()
         return
     end
@@ -356,6 +498,7 @@ function ItemViewerFrame:UpdateEntry(entry)
     ItemVisuals:ApplyEntryIcon(frame, entry.kind, entry.id)
     ItemVisuals:UpdateEntryCooldown(frame, entry.kind, entry.id)
     ApplyStyleToFrame(frame)
+    UpdateFrameMasqueSkin(frame)
     ApplyStackFontToFrame(frame)
     ApplyCooldownFontToFrame(frame)
 
@@ -493,16 +636,19 @@ function TrackerInstance:RefreshEntries()
 
     self.anchor:SetShown(count > 0 or self.anchor._CMCTracker_ForceShow)
     ns.Keybinds:UpdateAllKeybinds()
+    ReskinMasqueTrackerGroup()
 end
 
 function TrackerInstance:RefreshStyling()
     for _, ivf in ipairs(self.iconFrames) do
+        UpdateFrameMasqueSkin(ivf.frame)
         if ivf.frame:IsShown() then
             ApplyStyleToFrame(ivf.frame)
             ApplyStackFontToFrame(ivf.frame)
             ApplyCooldownFontToFrame(ivf.frame)
         end
     end
+    ReskinMasqueTrackerGroup()
 end
 
 function TrackerInstance:UpdateIconLayout()
@@ -769,6 +915,42 @@ function TrackerInstance:Create()
             kind = LEM.SettingType.Divider,
         },
         {
+            name = "Masque Integration",
+            kind = LEM.SettingType.Checkbox,
+            default = false,
+            get = function()
+                return (ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_masque) or false
+            end,
+            set = function(layoutName, value)
+                ns.db.profile.trinketRacialTracker_masque = value
+                if value then
+                    ns.db.profile.trinketRacialTracker_masque_prevSquareIcons = ns.db.profile.trinketRacialTracker_squareIcons
+                    ns.db.profile.trinketRacialTracker_masque_prevBorderThickness = ns.db.profile.trinketRacialTracker_borderThickness
+                    ns.db.profile.trinketRacialTracker_masque_prevIconZoom = ns.db.profile.trinketRacialTracker_iconZoom
+                    ns.db.profile.trinketRacialTracker_squareIcons = true
+                    ns.db.profile.trinketRacialTracker_borderThickness = 0
+                else
+                    if ns.db.profile.trinketRacialTracker_masque_prevSquareIcons ~= nil then
+                        ns.db.profile.trinketRacialTracker_squareIcons = ns.db.profile.trinketRacialTracker_masque_prevSquareIcons
+                    end
+                    if ns.db.profile.trinketRacialTracker_masque_prevBorderThickness ~= nil then
+                        ns.db.profile.trinketRacialTracker_borderThickness =
+                            ns.db.profile.trinketRacialTracker_masque_prevBorderThickness
+                    end
+                    if ns.db.profile.trinketRacialTracker_masque_prevIconZoom ~= nil then
+                        ns.db.profile.trinketRacialTracker_iconZoom = ns.db.profile.trinketRacialTracker_masque_prevIconZoom
+                    end
+                end
+                if ns.TrackerItemViewer then
+                    ns.TrackerItemViewer:RefreshItemViewerFrames()
+                    ns.TrackerItemViewer:RefreshStyling()
+                end
+                if LEM and LEM.RefreshManagerToggles then
+                    LEM:RefreshManagerToggles()
+                end
+            end,
+        },
+        {
             name = "Square Icons",
             kind = LEM.SettingType.Checkbox,
             default = false,
@@ -780,6 +962,9 @@ function TrackerInstance:Create()
                 if ns.TrackerItemViewer then
                     ns.TrackerItemViewer:RefreshStyling()
                 end
+            end,
+            isEnabled = function()
+                return not ((ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_masque) or false)
             end,
         },
         {
@@ -794,6 +979,9 @@ function TrackerInstance:Create()
                 if ns.TrackerItemViewer then
                     ns.TrackerItemViewer:RefreshStyling()
                 end
+            end,
+            isEnabled = function()
+                return not ((ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_masque) or false)
             end,
             minValue = 0,
             maxValue = 6,
@@ -814,6 +1002,9 @@ function TrackerInstance:Create()
                 if ns.TrackerItemViewer then
                     ns.TrackerItemViewer:RefreshStyling()
                 end
+            end,
+            isEnabled = function()
+                return not ((ns.db and ns.db.profile and ns.db.profile.trinketRacialTracker_masque) or false)
             end,
             minValue = 0,
             maxValue = 0.5,
