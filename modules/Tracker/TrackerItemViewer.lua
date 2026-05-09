@@ -6,6 +6,89 @@ local ItemVisuals = ns.TrackerItemVisuals
 local WilduUICore = ns.WilduUICore
 local LSM = LibStub("LibSharedMedia-3.0", true)
 local LEM = LibStub("LibEQOLEditMode-1.0")
+local Masque = LibStub("Masque", true)
+
+local masqueTrackerGroup
+
+local function GetMasqueTrackerGroup()
+    if not Masque then
+        return nil
+    end
+    if not masqueTrackerGroup then
+        masqueTrackerGroup = Masque:Group("Cooldown Manager Centered", "Trackers")
+    end
+    return masqueTrackerGroup
+end
+
+local function ReskinMasqueTrackerGroup()
+    local group = GetMasqueTrackerGroup()
+    if group and group.ReSkin then
+        group:ReSkin()
+    end
+end
+
+--- Masque skins a proxy icon texture; the real Icon stays functional for CMC logic but is hidden.
+local function EnsureFrameMasqueSkin(frame)
+    if not frame or frame.isSkinnedByMasque then
+        return
+    end
+    local group = GetMasqueTrackerGroup()
+    if not group or not frame.Icon or not frame.Cooldown then
+        return
+    end
+
+    if not frame.MasqueIcon then
+        frame.MasqueIcon = frame:CreateTexture(nil, "BACKGROUND")
+        frame.MasqueIcon:SetAllPoints(frame)
+    end
+
+    local icon = frame.Icon
+    local mic = frame.MasqueIcon
+
+    local tex = icon:GetTexture()
+    if tex then
+        mic:SetTexture(tex)
+    else
+        local atlas = icon.GetAtlas and icon:GetAtlas()
+        if atlas then
+            mic:SetAtlas(atlas, true)
+        end
+    end
+
+    if not frame._CMC_MasqueIconHooks then
+        frame._CMC_MasqueIconHooks = true
+        hooksecurefunc(icon, "SetTexture", function(_, ...)
+            mic:SetTexture(...)
+        end)
+        hooksecurefunc(icon, "SetAtlas", function(_, atlas, useAtlasSize)
+            if atlas then
+                mic:SetAtlas(atlas, useAtlasSize)
+            else
+                mic:SetTexture(nil)
+            end
+        end)
+        hooksecurefunc(icon, "SetTexCoord", function(_, ...)
+            mic:SetTexCoord(...)
+        end)
+        hooksecurefunc(icon, "SetDesaturation", function(_, desat)
+            mic:SetDesaturation(desat or 0)
+        end)
+        if icon.SetDesaturated then
+            hooksecurefunc(icon, "SetDesaturated", function(_, flag)
+                mic:SetDesaturated(flag)
+            end)
+        end
+    end
+
+    if icon.GetTexCoord then
+        mic:SetTexCoord(icon:GetTexCoord())
+    end
+
+    icon:SetAlpha(0)
+    group:AddButton(frame, { Icon = mic })
+    frame.isSkinnedByMasque = true
+    group:ReSkin()
+end
 
 local ItemViewer = ns.TrackerItemViewer or {}
 ns.TrackerItemViewer = ItemViewer
@@ -194,6 +277,17 @@ local function ApplySquareStyle(frame)
         frame.cmcBorder:SetBackdropBorderColor(0, 0, 0, 1)
         frame.cmcBorder:Show()
     end
+
+    if frame.MasqueIcon then
+        if not frame.masqueMask then
+            frame.masqueMask = frame:CreateMaskTexture()
+            frame.masqueMask:SetAllPoints(frame.MasqueIcon)
+            frame.MasqueIcon:AddMaskTexture(frame.masqueMask)
+        end
+        frame.masqueMask:SetTexture(BASE_SQUARE_MASK)
+        frame.masqueMask:Show()
+    end
+
     frame._CMC_SquareStyle = true
 end
 
@@ -214,6 +308,12 @@ local function RestoreDefaultStyle(frame)
     if frame.cmcBorder then
         frame.cmcBorder:Hide()
     end
+
+    if frame.masqueMask and frame.MasqueIcon and frame.MasqueIcon.RemoveMaskTexture then
+        frame.MasqueIcon:RemoveMaskTexture(frame.masqueMask)
+        frame.masqueMask = nil
+    end
+
     frame._CMC_SquareStyle = nil
 end
 
@@ -310,6 +410,7 @@ function ItemViewerFrame:Initialize()
         frame.count = count
     end
     ApplyStyleToFrame(frame)
+    EnsureFrameMasqueSkin(frame)
     ApplyStackFontToFrame(frame)
     ApplyCooldownFontToFrame(frame)
     frame:Hide()
@@ -493,6 +594,7 @@ function TrackerInstance:RefreshEntries()
 
     self.anchor:SetShown(count > 0 or self.anchor._CMCTracker_ForceShow)
     ns.Keybinds:UpdateAllKeybinds()
+    ReskinMasqueTrackerGroup()
 end
 
 function TrackerInstance:RefreshStyling()
@@ -503,6 +605,7 @@ function TrackerInstance:RefreshStyling()
             ApplyCooldownFontToFrame(ivf.frame)
         end
     end
+    ReskinMasqueTrackerGroup()
 end
 
 function TrackerInstance:UpdateIconLayout()
